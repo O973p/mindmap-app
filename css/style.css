@@ -279,6 +279,13 @@ button { font: inherit; color: inherit; }
   pointer-events: none;
 }
 
+/* Hauptknoten: hervorgehoben, Basis der dynamischen Hierarchie */
+.node.root {
+  font-weight: 650;
+  border-width: 2.5px;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--node-border));
+}
+
 .node:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--node-border)); }
 .node.selected {
   border-color: var(--accent);
@@ -359,14 +366,43 @@ button { font: inherit; color: inherit; }
 }
 #selbar-colors button:hover { transform: scale(1.15); }
 #selbar-colors button.active { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
-#selbar-delete {
+.selbar-btn {
   border: none; background: transparent; cursor: pointer;
   border-radius: 7px; padding: 4px 6px;
   color: var(--text-soft);
   display: inline-flex; align-items: center;
 }
-#selbar-delete svg { width: 15px; height: 15px; }
-#selbar-delete:hover { background: var(--surface-2); color: var(--danger); }
+.selbar-btn svg { width: 15px; height: 15px; }
+.selbar-btn:hover { background: var(--surface-2); color: var(--text); }
+#selbar-delete:hover { color: var(--danger); }
+#selbar-root.active { color: var(--accent); }
+#selbar-root.active svg { fill: var(--accent); }
+
+/* Im dynamischen Modus sind Größen berechnet — keine Zieh-Griffe */
+#canvas.auto-size .resize { display: none !important; }
+
+/* Aktiver Größenmodus-Schalter */
+#btn-sizemode.active { background: var(--accent-soft); color: var(--accent); }
+
+/* Kurzer Hinweis oben im Canvas */
+#toast {
+  position: absolute;
+  top: 14px; left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 28px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s;
+  z-index: 35;
+}
+#toast.show { opacity: 1; }
 
 /* ============ Schnell-Buttons (Touch) ============ */
 #fab {
@@ -438,7 +474,7 @@ button { font: inherit; color: inherit; }
   #selbar { padding: 8px 10px; gap: 8px; }
   #selbar-colors { gap: 8px; }
   #selbar-colors button { width: 27px; height: 27px; }
-  #selbar-delete svg { width: 18px; height: 18px; }
+  .selbar-btn svg { width: 18px; height: 18px; }
 }
 
 /* ============ Schmale Bildschirme (Handy Hochformat) ============ */
@@ -455,7 +491,7 @@ button { font: inherit; color: inherit; }
 
   /* Editor: alles in einer Zeile — Exportieren wird zum Icon-Button.
      flex-wrap nur als Sicherheitsnetz (z. B. wenn der Speichern-Button dazukommt) */
-  .editor-header { padding: 8px 10px; flex-wrap: wrap; row-gap: 6px; }
+  .editor-header { padding: 8px 10px; gap: 4px; flex-wrap: wrap; row-gap: 6px; }
   .title-input { flex: 1 1 90px; width: auto; min-width: 70px; }
   .editor-header .btn-label { display: none; }
   #btn-export { padding: 8px 10px; }

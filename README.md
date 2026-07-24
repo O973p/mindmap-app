@@ -68,7 +68,10 @@ am PC später mit dem alten Stand weiter.
 | Verschieben | Knoten ziehen |
 | Verbinden | Vom farbigen Punkt am Knotenrand zum Ziel-Knoten ziehen |
 | Bild einfügen | Bilddatei auf die Fläche ziehen oder Strg+V |
-| Bild-/Textgröße ändern | Knoten auswählen, Griff unten rechts ziehen |
+| Bild-/Textgröße ändern | Knoten auswählen, Griff unten rechts ziehen (klassischer Modus) |
+| Größe zurücksetzen | Knoten auswählen → Pfeile-nach-innen-Symbol in der Leiste (klassischer Modus) |
+| Hauptknoten festlegen | Knoten auswählen → Stern-Symbol in der Leiste |
+| Größenmodus | Blitz-Symbol in der Kopfzeile: klassisch (manuell) oder dynamisch — im dynamischen Modus wachsen Knoten mit der Größe ihres Astes (ausgehend von den Hauptknoten), mit fester Obergrenze |
 | Linienfarbe | Ergibt sich automatisch aus den Farben der verbundenen Knoten |
 | Zoomen | Mausrad (zoomt zum Mauszeiger) |
 | Bewegen (Pan) | Hintergrund ziehen (oder mittlere Maustaste) |

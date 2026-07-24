@@ -29,6 +29,9 @@ const Editor = (() => {
   let pinch = null;          // aktiver Zwei-Finger-Zoom (Touch)
   const pointers = new Map(); // aktive Pointer auf dem Canvas (für Pinch)
   let fileCtx = null;        // Datei-Modus: {handle?, fileName, dirty} — statt Store
+  let sizeMode = 'manual';   // 'manual' (klassisch) | 'auto' (dynamisch, nach Astgröße)
+  const autoScales = new Map(); // nodeId -> berechneter Größenfaktor (nur im auto-Modus)
+  let toastTimer = null;
 
   /* ---------- Hilfen ---------- */
 
@@ -63,7 +66,7 @@ const Editor = (() => {
 
   /* ---------- Verlauf (Undo/Redo) & Speichern ---------- */
 
-  const snap = () => JSON.stringify({ nodes, edges });
+  const snap = () => JSON.stringify({ nodes, edges, sizeMode });
 
   function pushHistory() {
     const s = snap();
@@ -79,7 +82,9 @@ const Editor = (() => {
   function restore(s) {
     const d = JSON.parse(s);
     nodes = d.nodes; edges = d.edges;
+    sizeMode = d.sizeMode || 'manual';
     sel = null; editingId = null; connecting = null;
+    applySizeModeUi();
     render();
     scheduleSave();
   }
@@ -102,7 +107,7 @@ const Editor = (() => {
     if (!mapRec) return;
     mapRec.name = titleInput.value.trim() || 'Unbenannt';
     mapRec.updatedAt = Date.now();
-    mapRec.data = { nodes, edges, view };
+    mapRec.data = { nodes, edges, view, sizeMode };
     if (fileCtx) return saveToFile();
     try {
       await Store.put(mapRec);
@@ -115,7 +120,7 @@ const Editor = (() => {
   /* ---------- Datei-Modus ---------- */
 
   function filePayload() {
-    return { app: 'mindmap-app', version: 1, name: mapRec.name, data: { nodes, edges, view } };
+    return { app: 'mindmap-app', version: 1, name: mapRec.name, data: { nodes, edges, view, sizeMode } };
   }
 
   async function saveToFile() {
@@ -171,6 +176,7 @@ const Editor = (() => {
     nodes = nds;
     edges = json.data?.edges ?? json.edges ?? [];
     view = json.data?.view || { x: canvas.clientWidth / 2, y: canvas.clientHeight / 2, s: 1 };
+    sizeMode = json.data?.sizeMode || 'manual';
     fileCtx = { handle, fileName, dirty: false };
     resetSession();
   }
@@ -190,6 +196,79 @@ const Editor = (() => {
     updateFileUi();
   }
 
+  /* ---------- Dynamische Größen (auto-Modus) ---------- */
+
+  /* Hierarchie ergibt sich aus den Verbindungen: Breitensuche von allen
+     Hauptknoten aus; jeder Knoten wächst logarithmisch mit der Zahl ALLER
+     seiner Unterknoten (ganzer Ast), hart gedeckelt (Text ×3, Bild ×2). */
+  function computeAutoScales() {
+    autoScales.clear();
+    if (sizeMode !== 'auto') return;
+    const roots = nodes.filter(n => n.root).map(n => n.id);
+    if (!roots.length) return; // ohne Hauptknoten: alles neutral
+
+    const adj = new Map(nodes.map(n => [n.id, []]));
+    for (const e of edges) {
+      if (adj.has(e.from) && adj.has(e.to)) {
+        adj.get(e.from).push(e.to);
+        adj.get(e.to).push(e.from);
+      }
+    }
+
+    // Multi-Source-BFS: Eltern-Zuordnung über den kürzesten Weg zum Hauptknoten
+    const parent = new Map();
+    const visited = new Set(roots);
+    const order = [...roots];
+    for (let i = 0; i < order.length; i++) {
+      for (const nb of adj.get(order[i]) || []) {
+        if (!visited.has(nb)) {
+          visited.add(nb);
+          parent.set(nb, order[i]);
+          order.push(nb);
+        }
+      }
+    }
+
+    // Astgrößen rückwärts aufsummieren (Kinder vor Eltern)
+    const desc = new Map(order.map(id => [id, 0]));
+    for (let i = order.length - 1; i >= 0; i--) {
+      const id = order[i], p = parent.get(id);
+      if (p !== undefined) desc.set(p, desc.get(p) + desc.get(id) + 1);
+    }
+
+    for (const id of order) {
+      const n = nodeById(id);
+      if (!n) continue;
+      const growth = 1 + 0.25 * Math.log2(1 + desc.get(id));
+      autoScales.set(id, n.type === 'image'
+        ? Math.min(2, growth)
+        : Math.min(3, (n.root ? 1.6 : 1) * growth));
+    }
+  }
+
+  function applySizeModeUi() {
+    const btn = document.getElementById('btn-sizemode');
+    const auto = sizeMode === 'auto';
+    btn.classList.toggle('active', auto);
+    btn.title = auto
+      ? 'Größenmodus: dynamisch (Größe folgt der Astgröße) — Klick für klassisch'
+      : 'Größenmodus: klassisch (manuell änderbar) — Klick für dynamisch';
+    canvas.classList.toggle('auto-size', auto);
+  }
+
+  function showToast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'toast';
+      canvas.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 4500);
+  }
+
   /* ---------- Rendering ---------- */
 
   function applyView() {
@@ -200,6 +279,7 @@ const Editor = (() => {
   }
 
   function render() {
+    computeAutoScales();
     const seen = new Set();
     for (const n of nodes) {
       let el = els.get(n.id);
@@ -276,14 +356,16 @@ const Editor = (() => {
     el.style.left = n.x + 'px';
     el.style.top = n.y + 'px';
     el.classList.toggle('selected', !!(sel && sel.type === 'node' && sel.id === n.id));
+    el.classList.toggle('root', !!n.root);
 
     if (n.type === 'image') {
+      const f = sizeMode === 'auto' ? (autoScales.get(n.id) || 1) : 1;
       const img = el.querySelector('img');
-      img.style.width = n.w + 'px';
-      img.style.height = n.h + 'px';
+      img.style.width = Math.round(n.w * f) + 'px';
+      img.style.height = Math.round(n.h * f) + 'px';
     } else {
       for (const c of COLORS) el.classList.toggle('c-' + c, n.color === c && c !== 'default');
-      const fs = n.fs || 1;
+      const fs = sizeMode === 'auto' ? (autoScales.get(n.id) || 1) : (n.fs || 1);
       el.style.fontSize = (14 * fs) + 'px';
       el.style.maxWidth = Math.round(280 * fs) + 'px';
       const t = el.querySelector('.node-text');
@@ -397,7 +479,7 @@ const Editor = (() => {
       bottomAnchor = topAnchor + 20;
     }
 
-    // Farbpalette nur für Text-Knoten
+    // Farbpalette und Stern nur für Text-Knoten, Reset nur im klassischen Modus
     const showColors = node && node.type !== 'image';
     selbarColors.style.display = showColors ? 'flex' : 'none';
     if (showColors) {
@@ -405,6 +487,12 @@ const Editor = (() => {
         b.classList.toggle('active', (node.color || 'default') === b.dataset.color);
       }
     }
+    const rootBtn = document.getElementById('selbar-root');
+    rootBtn.style.display = showColors ? '' : 'none';
+    rootBtn.classList.toggle('active', !!(node && node.root));
+    rootBtn.title = node && node.root ? 'Hauptknoten-Markierung entfernen' : 'Als Hauptknoten markieren';
+    document.getElementById('selbar-reset').style.display =
+      (node && sizeMode === 'manual') ? '' : 'none';
 
     // Innerhalb des Canvas halten; wenn oben kein Platz ist, unter das Element klappen
     selbar.hidden = false;
@@ -478,8 +566,10 @@ const Editor = (() => {
         (x.from === id && x.to === targetId) || (x.from === targetId && x.to === id))) {
         edges.push({ id: uid(), from: id, to: targetId });
         pushHistory();
+        render(); // volle Neuzeichnung: im dynamischen Modus ändern sich Größen
+      } else {
+        renderEdges();
       }
-      renderEdges();
     });
   }
 
@@ -615,6 +705,7 @@ const Editor = (() => {
     nodes = mapRec.data?.nodes || [];
     edges = mapRec.data?.edges || [];
     view = mapRec.data?.view || { x: canvas.clientWidth / 2, y: canvas.clientHeight / 2, s: 1 };
+    sizeMode = mapRec.data?.sizeMode || 'manual';
     fileCtx = null;
     resetSession();
   }
@@ -627,6 +718,7 @@ const Editor = (() => {
     titleInput.value = mapRec.name;
     updateUndoButtons();
     updateFileUi();
+    applySizeModeUi();
     applyView();
     render();
   }
@@ -670,6 +762,50 @@ const Editor = (() => {
     const delBtn = document.getElementById('selbar-delete');
     delBtn.addEventListener('pointerdown', e => e.stopPropagation());
     delBtn.addEventListener('click', deleteSelection);
+
+    // Hauptknoten markieren (Stern)
+    const rootBtn = document.getElementById('selbar-root');
+    rootBtn.addEventListener('pointerdown', e => e.stopPropagation());
+    rootBtn.addEventListener('click', () => {
+      if (!sel || sel.type !== 'node') return;
+      const n = nodeById(sel.id);
+      if (!n || n.type === 'image') return;
+      n.root = !n.root;
+      pushHistory();
+      render();
+    });
+
+    // Größe zurücksetzen (nur klassischer Modus)
+    const resetBtn = document.getElementById('selbar-reset');
+    resetBtn.addEventListener('pointerdown', e => e.stopPropagation());
+    resetBtn.addEventListener('click', () => {
+      if (!sel || sel.type !== 'node') return;
+      const n = nodeById(sel.id);
+      if (!n) return;
+      if (n.type === 'image') {
+        const img = els.get(n.id)?.querySelector('img');
+        if (img && img.naturalWidth) {
+          const bw = Math.min(340, img.naturalWidth);
+          n.w = Math.round(bw);
+          n.h = Math.round(img.naturalHeight * (bw / img.naturalWidth));
+        }
+      } else {
+        n.fs = 1;
+      }
+      pushHistory();
+      render();
+    });
+
+    // Größenmodus umschalten (klassisch <-> dynamisch)
+    document.getElementById('btn-sizemode').addEventListener('click', () => {
+      sizeMode = sizeMode === 'auto' ? 'manual' : 'auto';
+      applySizeModeUi();
+      if (sizeMode === 'auto' && !nodes.some(n => n.root)) {
+        showToast('Dynamische Größe ist an — markiere einen Knoten und tippe auf den Stern, um den Hauptknoten festzulegen.');
+      }
+      pushHistory();
+      render();
+    });
 
     // Pan & Auswahl aufheben
     canvas.addEventListener('pointerdown', e => {
