@@ -65,7 +65,7 @@ am PC später mit dem alten Stand weiter.
 |---|---|
 | Neuer Text-Knoten | Doppelklick auf freie Fläche |
 | Text bearbeiten | Doppelklick auf den Knoten |
-| Verschieben | Knoten ziehen |
+| Verschieben | Knoten ziehen — mit Hauptknoten wandert der ganze Ast starr mit; `Alt` gedrückt halten, um einen Knoten einzeln zu bewegen |
 | Verbinden | Vom farbigen Punkt am Knotenrand zum Ziel-Knoten ziehen |
 | Bild einfügen | Bilddatei auf die Fläche ziehen oder Strg+V |
 | Bild-/Textgröße ändern | Knoten auswählen, Griff unten rechts ziehen (klassischer Modus) |

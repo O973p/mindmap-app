@@ -201,11 +201,12 @@ const Editor = (() => {
   /* Hierarchie ergibt sich aus den Verbindungen: Breitensuche von allen
      Hauptknoten aus; jeder Knoten wächst logarithmisch mit der Zahl ALLER
      seiner Unterknoten (ganzer Ast), hart gedeckelt (Text ×3, Bild ×2). */
-  function computeAutoScales() {
-    autoScales.clear();
-    if (sizeMode !== 'auto') return;
+  /* Multi-Source-BFS von allen Hauptknoten: liefert Eltern-Zuordnung (über den
+     kürzesten Weg) und die Besuchsreihenfolge. Leer, wenn kein Hauptknoten. */
+  function computeHierarchy() {
+    const parent = new Map(), order = [];
     const roots = nodes.filter(n => n.root).map(n => n.id);
-    if (!roots.length) return; // ohne Hauptknoten: alles neutral
+    if (!roots.length) return { parent, order };
 
     const adj = new Map(nodes.map(n => [n.id, []]));
     for (const e of edges) {
@@ -214,11 +215,8 @@ const Editor = (() => {
         adj.get(e.to).push(e.from);
       }
     }
-
-    // Multi-Source-BFS: Eltern-Zuordnung über den kürzesten Weg zum Hauptknoten
-    const parent = new Map();
     const visited = new Set(roots);
-    const order = [...roots];
+    order.push(...roots);
     for (let i = 0; i < order.length; i++) {
       for (const nb of adj.get(order[i]) || []) {
         if (!visited.has(nb)) {
@@ -228,6 +226,31 @@ const Editor = (() => {
         }
       }
     }
+    return { parent, order };
+  }
+
+  /* Knoten samt allen Unterknoten seines Astes (für starres Mitbewegen).
+     Ohne Hauptknoten oder für nicht angebundene Knoten: nur der Knoten selbst. */
+  function subtreeIds(id) {
+    const { parent, order } = computeHierarchy();
+    if (!order.includes(id)) return [id];
+    const children = new Map();
+    for (const [c, p] of parent) {
+      if (!children.has(p)) children.set(p, []);
+      children.get(p).push(c);
+    }
+    const out = [id];
+    for (let i = 0; i < out.length; i++) {
+      for (const c of children.get(out[i]) || []) out.push(c);
+    }
+    return out;
+  }
+
+  function computeAutoScales() {
+    autoScales.clear();
+    if (sizeMode !== 'auto') return;
+    const { parent, order } = computeHierarchy();
+    if (!order.length) return; // ohne Hauptknoten: alles neutral
 
     // Astgrößen rückwärts aufsummieren (Kinder vor Eltern)
     const desc = new Map(order.map(id => [id, 0]));
@@ -535,17 +558,25 @@ const Editor = (() => {
   }
 
   function startNodeDrag(id, e) {
-    const n = nodeById(id);
     const start = worldPos(e);
-    const nx = n.x, ny = n.y;
+    // Mit Hauptknoten bewegt sich der ganze Ast starr mit; Alt = einzeln bewegen
+    const group = (e.altKey ? [id] : subtreeIds(id))
+      .map(gid => {
+        const n = nodeById(gid);
+        return n ? { n, x0: n.x, y0: n.y } : null;
+      })
+      .filter(Boolean);
     let moved = false;
     drag(ev => {
       const p = worldPos(ev);
-      n.x = nx + (p.x - start.x);
-      n.y = ny + (p.y - start.y);
+      const dx = p.x - start.x, dy = p.y - start.y;
       moved = true;
-      const el = els.get(id);
-      if (el) { el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
+      for (const g of group) {
+        g.n.x = g.x0 + dx;
+        g.n.y = g.y0 + dy;
+        const el = els.get(g.n.id);
+        if (el) { el.style.left = g.n.x + 'px'; el.style.top = g.n.y + 'px'; }
+      }
       renderEdges();
       positionSelbar();
     }, () => {
