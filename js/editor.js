@@ -30,6 +30,7 @@ const Editor = (() => {
   const pointers = new Map(); // aktive Pointer auf dem Canvas (für Pinch)
   let fileCtx = null;        // Datei-Modus: {handle?, fileName, dirty} — statt Store
   let sizeMode = 'manual';   // 'manual' (klassisch) | 'auto' (dynamisch, nach Astgröße)
+  let groupDrag = true;      // true: Knoten nimmt beim Ziehen seinen Ast mit
   const autoScales = new Map(); // nodeId -> berechneter Größenfaktor (nur im auto-Modus)
   let toastTimer = null;
 
@@ -107,7 +108,7 @@ const Editor = (() => {
     if (!mapRec) return;
     mapRec.name = titleInput.value.trim() || 'Unbenannt';
     mapRec.updatedAt = Date.now();
-    mapRec.data = { nodes, edges, view, sizeMode };
+    mapRec.data = { nodes, edges, view, sizeMode, groupDrag };
     if (fileCtx) return saveToFile();
     try {
       await Store.put(mapRec);
@@ -120,7 +121,7 @@ const Editor = (() => {
   /* ---------- Datei-Modus ---------- */
 
   function filePayload() {
-    return { app: 'mindmap-app', version: 1, name: mapRec.name, data: { nodes, edges, view, sizeMode } };
+    return { app: 'mindmap-app', version: 1, name: mapRec.name, data: { nodes, edges, view, sizeMode, groupDrag } };
   }
 
   async function saveToFile() {
@@ -177,6 +178,7 @@ const Editor = (() => {
     edges = json.data?.edges ?? json.edges ?? [];
     view = json.data?.view || { x: canvas.clientWidth / 2, y: canvas.clientHeight / 2, s: 1 };
     sizeMode = json.data?.sizeMode || 'manual';
+    groupDrag = json.data?.groupDrag !== false;
     fileCtx = { handle, fileName, dirty: false };
     resetSession();
   }
@@ -277,6 +279,14 @@ const Editor = (() => {
       ? 'Größenmodus: dynamisch (Größe folgt der Astgröße) — Klick für klassisch'
       : 'Größenmodus: klassisch (manuell änderbar) — Klick für dynamisch';
     canvas.classList.toggle('auto-size', auto);
+  }
+
+  function applyDragModeUi() {
+    const btn = document.getElementById('btn-dragmode');
+    btn.classList.toggle('active', groupDrag);
+    btn.title = groupDrag
+      ? 'Ast-Bewegung: an — Knoten nehmen ihren Ast mit (Alt: einzeln bewegen)'
+      : 'Ast-Bewegung: aus — Knoten bewegen sich einzeln (Alt: Ast mitnehmen)';
   }
 
   function showToast(msg) {
@@ -559,8 +569,9 @@ const Editor = (() => {
 
   function startNodeDrag(id, e) {
     const start = worldPos(e);
-    // Mit Hauptknoten bewegt sich der ganze Ast starr mit; Alt = einzeln bewegen
-    const group = (e.altKey ? [id] : subtreeIds(id))
+    // Ast-Bewegung je nach Schalter; Alt kehrt das aktuelle Verhalten um
+    const useGroup = e.altKey ? !groupDrag : groupDrag;
+    const group = (useGroup ? subtreeIds(id) : [id])
       .map(gid => {
         const n = nodeById(gid);
         return n ? { n, x0: n.x, y0: n.y } : null;
@@ -737,6 +748,7 @@ const Editor = (() => {
     edges = mapRec.data?.edges || [];
     view = mapRec.data?.view || { x: canvas.clientWidth / 2, y: canvas.clientHeight / 2, s: 1 };
     sizeMode = mapRec.data?.sizeMode || 'manual';
+    groupDrag = mapRec.data?.groupDrag !== false; // Standard: an
     fileCtx = null;
     resetSession();
   }
@@ -750,6 +762,7 @@ const Editor = (() => {
     updateUndoButtons();
     updateFileUi();
     applySizeModeUi();
+    applyDragModeUi();
     applyView();
     render();
   }
@@ -825,6 +838,13 @@ const Editor = (() => {
       }
       pushHistory();
       render();
+    });
+
+    // Ast-Bewegung umschalten (reine Bedien-Einstellung, kein Verlaufs-Eintrag)
+    document.getElementById('btn-dragmode').addEventListener('click', () => {
+      groupDrag = !groupDrag;
+      applyDragModeUi();
+      scheduleSave();
     });
 
     // Größenmodus umschalten (klassisch <-> dynamisch)

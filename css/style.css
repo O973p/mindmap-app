@@ -381,8 +381,8 @@ button { font: inherit; color: inherit; }
 /* Im dynamischen Modus sind Größen berechnet — keine Zieh-Griffe */
 #canvas.auto-size .resize { display: none !important; }
 
-/* Aktiver Größenmodus-Schalter */
-#btn-sizemode.active { background: var(--accent-soft); color: var(--accent); }
+/* Aktive Modus-Schalter in der Kopfzeile */
+#btn-sizemode.active, #btn-dragmode.active { background: var(--accent-soft); color: var(--accent); }
 
 /* Kurzer Hinweis oben im Canvas */
 #toast {
@@ -492,7 +492,8 @@ button { font: inherit; color: inherit; }
   /* Editor: alles in einer Zeile — Exportieren wird zum Icon-Button.
      flex-wrap nur als Sicherheitsnetz (z. B. wenn der Speichern-Button dazukommt) */
   .editor-header { padding: 8px 10px; gap: 4px; flex-wrap: wrap; row-gap: 6px; }
-  .title-input { flex: 1 1 90px; width: auto; min-width: 70px; }
+  .editor-header .divider { display: none; }
+  .title-input { flex: 1 1 90px; width: auto; min-width: 60px; }
   .editor-header .btn-label { display: none; }
   #btn-export { padding: 8px 10px; }
   #btn-save-as { display: none; } /* auf Handys ohnehin nicht verfügbar (keine File-System-API) */
