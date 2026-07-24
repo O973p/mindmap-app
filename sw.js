@@ -1,7 +1,7 @@
 /* Service Worker: macht die App installierbar und offline-fähig.
    Strategie: Netz zuerst (immer aktuell, wenn online), Cache als Fallback.
    API-Anfragen (/api/...) werden nie gecacht. */
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = 'mindmap-' + VERSION;
 const ASSETS = [
   './',
@@ -32,8 +32,15 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.pathname.includes('/api/')) return; // API: immer Netz
+  // Eigene Dateien am HTTP-Cache vorbei revalidieren (ETag/304 ist billig) —
+  // sonst hängen Updates bis zu 10 Minuten im GitHub-Pages-Cache fest.
+  const request = url.origin === location.origin
+    ? (e.request.mode === 'navigate'
+        ? fetch(e.request.url, { cache: 'no-cache' })
+        : fetch(e.request, { cache: 'no-cache' }))
+    : fetch(e.request);
   e.respondWith(
-    fetch(e.request)
+    request
       .then(r => {
         if (r.ok && url.origin === location.origin) {
           const copy = r.clone();

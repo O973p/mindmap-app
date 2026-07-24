@@ -159,7 +159,7 @@ const App = (() => {
     document.getElementById('btn-theme-home').addEventListener('click', toggleTheme);
     document.getElementById('btn-theme-editor').addEventListener('click', toggleTheme);
 
-    document.getElementById('btn-new').addEventListener('click', async () => {
+    const createNewMap = async () => {
       const rec = {
         id: uid(), name: 'Neue Mindmap',
         createdAt: Date.now(), updatedAt: Date.now(),
@@ -167,7 +167,9 @@ const App = (() => {
       };
       await Store.put(rec);
       openMap(rec.id);
-    });
+    };
+    document.getElementById('btn-new').addEventListener('click', createNewMap);
+    document.getElementById('btn-new-fab').addEventListener('click', createNewMap);
 
     const importInput = document.getElementById('import-file');
     document.getElementById('btn-import').addEventListener('click', () => importInput.click());

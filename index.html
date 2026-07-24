@@ -32,10 +32,13 @@
         <path d="M28 24 C 48 24, 72 24, 92 24"/>
         <circle cx="102" cy="24" r="10"/>
       </svg>
-      <p>Noch keine Mindmaps.<br>Erstelle deine erste mit <b>„+ Neue Mindmap"</b>.</p>
+      <p>Noch keine Mindmaps.<br>Tippe auf das <b>Plus</b>, um deine erste zu erstellen.</p>
     </div>
     <input type="file" id="import-file" accept=".json,application/json" hidden>
     <input type="file" id="open-file" accept=".json,application/json" hidden>
+
+    <!-- Schwebender Neu-Button (nur auf schmalen Bildschirmen sichtbar) -->
+    <button id="btn-new-fab" title="Neue Mindmap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
   </div>
 
   <!-- ===== Editor ===== -->
@@ -50,7 +53,7 @@
       <span class="divider"></span>
       <button id="btn-save-file" class="btn ghost" hidden>Speichern</button>
       <button id="btn-save-as" class="btn ghost" hidden title="Map als Datei speichern und ab dann direkt in dieser Datei weiterarbeiten (z. B. im Drive-Ordner)">Als Datei…</button>
-      <button id="btn-export" class="btn ghost">Exportieren</button>
+      <button id="btn-export" class="btn ghost" title="Als Datei exportieren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span class="btn-label">Exportieren</span></button>
       <button id="btn-theme-editor" class="btn ghost icon" title="Design wechseln"></button>
     </header>
 
