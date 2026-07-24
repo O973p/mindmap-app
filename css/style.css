@@ -49,7 +49,7 @@ body {
   overflow: hidden;
 }
 
-.view { display: none; height: 100vh; flex-direction: column; }
+.view { display: none; height: 100vh; height: 100dvh; flex-direction: column; }
 .view.active { display: flex; }
 
 .spacer { flex: 1; }
@@ -318,7 +318,7 @@ button { font: inherit; color: inherit; }
   padding: 6px 8px;
   box-shadow: var(--shadow-lg);
   z-index: 30;
-  transform: translate(-50%, -100%);
+  /* transform wird in positionSelbar() gesetzt (über/unter dem Element) */
 }
 #selbar[hidden] { display: none; }
 #selbar-colors { display: flex; gap: 5px; }
@@ -408,6 +408,23 @@ button { font: inherit; color: inherit; }
   .handle.h-r { right: -11px; }
   .resize { width: 22px; height: 22px; right: -9px; bottom: -9px; }
   .hintbar { display: none; }
+  #selbar { padding: 8px 10px; gap: 8px; }
+  #selbar-colors { gap: 8px; }
+  #selbar-colors button { width: 27px; height: 27px; }
+  #selbar-delete svg { width: 18px; height: 18px; }
+}
+
+/* ============ Schmale Bildschirme (Handy Hochformat) ============ */
+@media (max-width: 640px) {
+  .home-header { flex-wrap: wrap; padding: 14px 16px; gap: 6px; }
+  .logo { flex-basis: 100%; margin-bottom: 4px; }
+  .home-header .spacer { display: none; }
+  .cards { padding: 4px 16px 32px; grid-template-columns: 1fr; }
+  .card-actions { opacity: 1; } /* kein Hover am Handy — Buttons immer zeigen */
+
+  .editor-header { flex-wrap: wrap; padding: 8px 10px; row-gap: 6px; }
+  .title-input { flex: 1 1 120px; width: auto; min-width: 90px; }
+  .file-badge { display: none; } /* Platz sparen — der Speichern-Button zeigt den Zustand */
 }
 
 /* ============ Hinweisleiste ============ */

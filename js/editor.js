@@ -380,19 +380,21 @@ const Editor = (() => {
   function positionSelbar() {
     if (!sel) { selbar.hidden = true; return; }
 
-    let bx, by, node = null;
+    let bx, topAnchor, bottomAnchor, node = null;
     if (sel.type === 'node') {
       node = nodeById(sel.id);
       const el = els.get(sel.id);
       if (!node || !el) { selbar.hidden = true; return; }
       bx = view.x + (node.x + el.offsetWidth / 2) * view.s;
-      by = view.y + node.y * view.s - 10;
+      topAnchor = view.y + node.y * view.s - 10;
+      bottomAnchor = view.y + (node.y + el.offsetHeight) * view.s + 10;
     } else {
       const e = edgeById(sel.id);
       if (!e) { selbar.hidden = true; return; }
       const a = nodeCenter(nodeById(e.from)), b = nodeCenter(nodeById(e.to));
       bx = view.x + ((a.x + b.x) / 2) * view.s;
-      by = view.y + ((a.y + b.y) / 2) * view.s - 10;
+      topAnchor = view.y + ((a.y + b.y) / 2) * view.s - 10;
+      bottomAnchor = topAnchor + 20;
     }
 
     // Farbpalette nur für Text-Knoten
@@ -404,9 +406,14 @@ const Editor = (() => {
       }
     }
 
-    selbar.style.left = bx + 'px';
-    selbar.style.top = by + 'px';
+    // Innerhalb des Canvas halten; wenn oben kein Platz ist, unter das Element klappen
     selbar.hidden = false;
+    const bw = selbar.offsetWidth, bh = selbar.offsetHeight;
+    const left = Math.min(Math.max(bx, bw / 2 + 6), Math.max(bw / 2 + 6, canvas.clientWidth - bw / 2 - 6));
+    const below = topAnchor - bh < 6;
+    selbar.style.left = left + 'px';
+    selbar.style.top = (below ? bottomAnchor : topAnchor) + 'px';
+    selbar.style.transform = below ? 'translate(-50%, 0)' : 'translate(-50%, -100%)';
   }
 
   function deleteSelection() {
@@ -649,7 +656,8 @@ const Editor = (() => {
       const setBg = () => { b.style.background = COLOR_PREVIEW[c][dark() ? 1 : 0]; };
       setBg();
       new MutationObserver(setBg).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-      b.addEventListener('pointerdown', e => e.preventDefault()); // Fokus im Editor behalten
+      // Kein preventDefault hier: das würde auf Touch-Geräten den Klick verschlucken
+      b.addEventListener('pointerdown', e => e.stopPropagation());
       b.addEventListener('click', () => {
         if (sel && sel.type === 'node') {
           const n = nodeById(sel.id);
@@ -659,7 +667,9 @@ const Editor = (() => {
       selbarColors.appendChild(b);
     }
 
-    document.getElementById('selbar-delete').addEventListener('click', deleteSelection);
+    const delBtn = document.getElementById('selbar-delete');
+    delBtn.addEventListener('pointerdown', e => e.stopPropagation());
+    delBtn.addEventListener('click', deleteSelection);
 
     // Pan & Auswahl aufheben
     canvas.addEventListener('pointerdown', e => {
