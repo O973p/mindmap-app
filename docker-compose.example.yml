@@ -1,0 +1,16 @@
+# Vorlage: nach docker-compose.yml kopieren und den Schlüssel ersetzen.
+# Die echte docker-compose.yml ist per .gitignore vom Repository ausgeschlossen.
+services:
+  mindmap:
+    image: python:3.12-alpine
+    container_name: mindmap
+    restart: unless-stopped
+    ports:
+      - "8123:8123"
+    environment:
+      - MINDMAP_KEY=HIER-EIGENEN-LANGEN-SCHLUESSEL-EINTRAGEN
+      - MINDMAP_PORT=8123
+    volumes:
+      - ./:/app
+    working_dir: /app
+    command: python server/server.py

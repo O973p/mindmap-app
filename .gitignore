@@ -1,0 +1,9 @@
+# Enthält den echten Zugangsschlüssel — bleibt lokal, nie veröffentlichen!
+docker-compose.yml
+
+# Gespeicherte Maps (persönliche Daten)
+server/data/
+
+# Windows-Kram
+Thumbs.db
+desktop.ini
