@@ -1,7 +1,7 @@
 /* Service Worker: macht die App installierbar und offline-fähig.
    Strategie: Netz zuerst (immer aktuell, wenn online), Cache als Fallback.
    API-Anfragen (/api/...) werden nie gecacht. */
-const VERSION = 'v6';
+const VERSION = 'v7';
 const CACHE = 'mindmap-' + VERSION;
 const ASSETS = [
   './',

@@ -106,7 +106,11 @@ const App = (() => {
     downloadJson({
       app: 'mindmap-app', version: 1,
       name: rec.name,
-      data: { nodes: rec.data?.nodes || [], edges: rec.data?.edges || [] },
+      data: {
+        nodes: rec.data?.nodes || [], edges: rec.data?.edges || [],
+        sizeMode: rec.data?.sizeMode || 'manual',
+        groupDrag: rec.data?.groupDrag !== false,
+      },
     }, (rec.name || 'mindmap') + '.mindmap.json');
   }
 
@@ -120,7 +124,11 @@ const App = (() => {
         id: uid(),
         name: (json.name || file.name.replace(/\.mindmap\.json$|\.json$/i, '')).trim() || 'Importierte Map',
         createdAt: Date.now(), updatedAt: Date.now(),
-        data: { nodes, edges, view: null },
+        data: {
+          nodes, edges, view: null,
+          sizeMode: json.data?.sizeMode || 'manual',
+          groupDrag: json.data?.groupDrag !== false,
+        },
       });
       renderList();
     } catch (err) {

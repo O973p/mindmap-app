@@ -260,6 +260,9 @@ button { font: inherit; color: inherit; }
 }
 .node.text {
   padding: .65em 1em;   /* em-basiert, damit alles mit der Schriftgröße skaliert */
+  /* width:max-content, weil #world die Breite 0 hat: ohne das bekämen Knoten
+     mit positivem x keinen Platz und würden auf Minimalbreite gequetscht. */
+  width: max-content;
   max-width: 280px;
   min-width: 44px;
   font-size: 14px;
